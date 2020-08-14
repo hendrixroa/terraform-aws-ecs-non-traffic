@@ -4,7 +4,8 @@ Module to provisioning services and rolling update deployments and autoscaling e
 
 - Elasticsearch cluster for logs.
 - Autoscaling
-- Terraform: `0.12.+`
+- Terraform: `0.13.+`
+- Force deployment
 
 ## Inputs
 
@@ -42,50 +43,10 @@ Module to provisioning services and rolling update deployments and autoscaling e
 #### How to use
 
 ```hcl
-resource "aws_ecs_task_definition" "your_task" {
-  family                   = "name-service"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  execution_role_arn       = "IAM role arn for task execution"
-  task_role_arn            = "IAM role arn for task"
-  cpu                      = "${var.cpu_unit}"
-  memory                   = "${var.memory}"
 
-  container_definitions = <<DEFINITION
-    [
-      {
-        "essential": true,
-        "image": "ECR Repository ARN",
-        "name": "name-service",
-        "logConfiguration": {
-          "logDriver": "awslogs",
-          "options": {
-            "awslogs-region": "us-east-2",
-            "awslogs-group": "name-service",
-            "awslogs-stream-prefix": "ecs"
-          }
-        },
-        "command": ["custom command for your image"],
-        "environment": [
-          {
-            "name"      : "NAME_ENV_VAR",
-            "value"     : "Awesome value"
-          }
-        ],
-        "secrets": [
-          {
-            "name": "${var.secrets_name}",
-            "valueFrom": "${var.secrets_arn}"
-          }
-        ],
-      }
-    ]
-  DEFINITION
-}
-
-module "your_service" {
+module "your_service_name" {
   source                = "hendrixroa/ecs-non-traffic/aws"
-  name                  = "cryptoindicator"
+  name                  = "nameService"
   security_groups       = ["security_group_id"]
   subnets               = ["list of subnets"]
   vpc_id                = "vpc_id"
@@ -94,7 +55,6 @@ module "your_service" {
   roleExecArn           = "role task execution arn"
   roleArn               = "role task arn"
   service_count         = 1
-  task                  = "${aws_ecs_task_definition.your_task.arn}"
   disable_log_streaming = true
   dummy_deps            = "any deps that this service should wait for."
   kms_key_id            = "kms key id"

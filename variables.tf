@@ -16,7 +16,6 @@ variable "subnets" {
 variable "security_groups" {
   description = "Security groups allowed"
   default     = []
-  type        = "list"
 }
 
 variable "cluster" {
@@ -57,41 +56,29 @@ variable "roleExecArn" {
 variable "environment" {
   description = "Environment variables for ecs task"
   default     = []
-  type        = "list"
-}
-
-variable "secrets_arn" {
-  description = "Secrets arn for ecs task"
-  default     = ""
-  type        = string
 }
 
 variable "secrets_name" {
   description = "Secrets name for ecs task"
-  default     = "Secrets"
-  type        = string
+}
+
+variable "secrets_value_arn" {
+  description = "Secrets values for ecs task"
 }
 
 variable "auto_scale_role" {
   description = "IAM Role for autocaling services"
   default     = ""
-  type        = "string"
 }
 
 variable "service_role_codedeploy" {
   description = "Role for ecs codedeploy"
   default     = ""
-  type        = "string"
 }
 
 variable "dummy_deps" {
   description = "Dummy dependencies for interpolation step"
   default     = ""
-}
-
-variable "task" {
-  default     = ""
-  description = "ARN of task created"
 }
 
 variable "max_scale" {
@@ -110,8 +97,7 @@ variable "lambda_stream_arn" {
 }
 
 variable "cwl_endpoint" {
-  type        = "string"
-  default     = "logs.us-east-2.amazonaws.com"
+  default     = "logs.us-east-1.amazonaws.com"
   description = "Cloudwatch endpoint logs"
 }
 
@@ -122,9 +108,33 @@ variable "public_ip" {
 
 variable "disable_log_streaming" {
   default     = false
-  description = "Flag todisable log streaming to kibana"
+  description = "Flag to disable log streaming to kibana"
 }
 
-variable "kms_key_logs" {
-  description = "KMS Key for encryption logs"
+variable "ecr_image_url" {
+  description = "ECR docker image"
+}
+
+variable "region" {
+  description = "AWS region"
+  default     = "us-east-1"
+}
+
+variable "database_log_level" {
+  description = "Database log level"
+  default     = "error"
+}
+
+variable "log_level" {
+  description = "App log level"
+  default     = "info"
+}
+
+variable "port" {
+  description = "Port number exposed by container"
+  default     = ""
+}
+
+variable "prefix_logs" {
+  default = "ecs"
 }

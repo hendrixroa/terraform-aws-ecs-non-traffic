@@ -1,11 +1,18 @@
+/*
+@doc()
+# Service without traffic control ecs documentation
+Module to provisioning services and rolling update deployments and autoscaling ecs task with cloudwatch alarms
+*/
+
 //  AWS ECS Service to run the task definition
 resource "aws_ecs_service" "main" {
   name                               = var.name
   cluster                            = var.cluster
-  task_definition                    = var.task
+  task_definition                    = aws_ecs_task_definition.main.arn
   launch_type                        = "FARGATE"
   scheduling_strategy                = "REPLICA"
   desired_count                      = var.service_count
+  force_new_deployment               = true
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
 
@@ -19,8 +26,36 @@ resource "aws_ecs_service" "main" {
     create_before_destroy = true
 
     ignore_changes = [
-      "desired_count",
+      desired_count,
     ]
+  }
+}
+
+// AWS ECS Task defintion to run the container passed by name
+resource "aws_ecs_task_definition" "main" {
+  family                   = "${var.name}-service"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  execution_role_arn       = var.roleExecArn
+  task_role_arn            = var.roleArn
+  cpu                      = var.cpu_unit
+  memory                   = var.memory
+  container_definitions    = data.template_file.main.rendered
+}
+
+data "template_file" "main" {
+  template = file("${path.module}/task_definition.json")
+
+  vars = {
+    ecr_image_url      = var.ecr_image_url
+    name               = var.name
+    port               = var.port
+    region             = var.region
+    secrets_name       = var.secrets_name
+    secrets_value_arn  = var.secrets_value_arn
+    database_log_level = var.database_log_level
+    log_level          = var.log_level
+    prefix_logs        = var.prefix_logs
   }
 }
 
@@ -28,7 +63,6 @@ resource "aws_ecs_service" "main" {
 resource "aws_cloudwatch_log_group" "main" {
   name              = var.name
   retention_in_days = 14
-  kms_key_id        = var.kms_key_logs
 }
 
 // Streaming logs to Elasticsearch
@@ -44,7 +78,7 @@ resource "aws_lambda_permission" "main" {
 // Add subscription resource to streaming logs of module to Elasticsearch
 resource "aws_cloudwatch_log_subscription_filter" "main" {
   count           = var.disable_log_streaming ? 0 : 1
-  depends_on      = ["aws_lambda_permission.main"]
+  depends_on      = [aws_lambda_permission.main]
   name            = "cloudwatch_${var.name}_logs_to_elasticsearch"
   log_group_name  = aws_cloudwatch_log_group.main.name
   filter_pattern  = ""
@@ -52,7 +86,7 @@ resource "aws_cloudwatch_log_subscription_filter" "main" {
 
   lifecycle {
     ignore_changes = [
-      "distribution",
+      distribution,
     ]
   }
 }
@@ -74,7 +108,7 @@ resource "aws_appautoscaling_target" "main" {
     create_before_destroy = true
 
     ignore_changes = [
-      "role_arn",
+      role_arn,
     ]
   }
 }
@@ -82,7 +116,6 @@ resource "aws_appautoscaling_target" "main" {
 // AWS Autoscaling policy to scale with additional instance if the criteria is reached
 resource "aws_appautoscaling_policy" "up" {
   name               = "ecs_scale_up"
-  policy_type        = "StepScaling"
   service_namespace  = "ecs"
   resource_id        = "service/${var.cluster}/${aws_ecs_service.main.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -94,23 +127,11 @@ resource "aws_appautoscaling_policy" "up" {
 
     step_adjustment {
       metric_interval_lower_bound = 0
-      metric_interval_upper_bound = 15
       scaling_adjustment          = 1
-    }
-
-    step_adjustment {
-      metric_interval_lower_bound = 15
-      metric_interval_upper_bound = 25
-      scaling_adjustment          = 2
-    }
-
-    step_adjustment {
-      metric_interval_lower_bound = 25
-      scaling_adjustment          = 3
     }
   }
 
-  depends_on = ["aws_appautoscaling_target.main"]
+  depends_on = [aws_appautoscaling_target.main]
 
   lifecycle {
     create_before_destroy = true
@@ -120,14 +141,13 @@ resource "aws_appautoscaling_policy" "up" {
 // AWS Autoscaling policy to scale down instance if the criteria is reached
 resource "aws_appautoscaling_policy" "down" {
   name               = "ecs_scale_down"
-  policy_type        = "StepScaling"
   service_namespace  = "ecs"
   resource_id        = "service/${var.cluster}/${aws_ecs_service.main.name}"
   scalable_dimension = "ecs:service:DesiredCount"
 
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
-    cooldown                = 60
+    cooldown                = 300
     metric_aggregation_type = "Average"
 
     step_adjustment {
@@ -136,52 +156,7 @@ resource "aws_appautoscaling_policy" "down" {
     }
   }
 
-  depends_on = ["aws_appautoscaling_target.main"]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-// Metric used for auto scale to detect if the cpu consuming is high
-resource "aws_cloudwatch_metric_alarm" "service_cpu_high" {
-  alarm_name          = "cpu_utilization_high_${var.name}"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/ECS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = "70"
-
-  dimensions = {
-    ClusterName = var.cluster
-    ServiceName = aws_ecs_service.main.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.up.arn]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "service_cpu_low" {
-  alarm_name          = "cpu_utilization_low_${var.name}"
-  comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/ECS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = "20"
-
-  dimensions = {
-    ClusterName = var.cluster
-    ServiceName = aws_ecs_service.main.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.down.arn]
+  depends_on = [aws_appautoscaling_target.main]
 
   lifecycle {
     create_before_destroy = true
