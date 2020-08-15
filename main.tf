@@ -72,23 +72,19 @@ resource "aws_lambda_permission" "main" {
   action        = "lambda:InvokeFunction"
   function_name = var.lambda_stream_arn
   principal     = var.cwl_endpoint
-  source_arn    = aws_cloudwatch_log_group.main.arn
+  source_arn    = "${aws_cloudwatch_log_group.main[count.index].arn}:*"
 }
 
 // Add subscription resource to streaming logs of module to Elasticsearch
 resource "aws_cloudwatch_log_subscription_filter" "main" {
   count           = var.disable_log_streaming ? 0 : 1
-  depends_on      = [aws_lambda_permission.main]
   name            = "cloudwatch_${var.name}_logs_to_elasticsearch"
-  log_group_name  = aws_cloudwatch_log_group.main.name
+  log_group_name  = aws_cloudwatch_log_group.main[count.index].name
   filter_pattern  = ""
   destination_arn = var.lambda_stream_arn
+  distribution    = "Random"
 
-  lifecycle {
-    ignore_changes = [
-      distribution,
-    ]
-  }
+  depends_on = [aws_lambda_permission.main]
 }
 
 /*===========================================
