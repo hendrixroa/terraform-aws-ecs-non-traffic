@@ -56,35 +56,8 @@ data "template_file" "main" {
     database_log_level = var.database_log_level
     log_level          = var.log_level
     prefix_logs        = var.prefix_logs
+    es_url             = var.es_url
   }
-}
-
-// CloudWatch logs to stream all module
-resource "aws_cloudwatch_log_group" "main" {
-  name              = var.name
-  retention_in_days = 14
-}
-
-// Streaming logs to Elasticsearch
-resource "aws_lambda_permission" "main" {
-  count         = var.disable_log_streaming ? 0 : 1
-  statement_id  = "${var.name}_cloudwatch_allow"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_stream_arn
-  principal     = var.cwl_endpoint
-  source_arn    = "${aws_cloudwatch_log_group.main.arn}:*"
-}
-
-// Add subscription resource to streaming logs of module to Elasticsearch
-resource "aws_cloudwatch_log_subscription_filter" "main" {
-  count           = var.disable_log_streaming ? 0 : 1
-  name            = "cloudwatch_${var.name}_logs_to_elasticsearch"
-  log_group_name  = aws_cloudwatch_log_group.main.name
-  filter_pattern  = ""
-  destination_arn = var.lambda_stream_arn
-  distribution    = "Random"
-
-  depends_on = [aws_lambda_permission.main]
 }
 
 /*===========================================

@@ -91,24 +91,9 @@ variable "min_scale" {
   default     = 1
 }
 
-variable "lambda_stream_arn" {
-  description = "ARN of function lambda to stream logs into elasticsearch"
-  default     = ""
-}
-
-variable "cwl_endpoint" {
-  default     = "logs.us-east-1.amazonaws.com"
-  description = "Cloudwatch endpoint logs"
-}
-
 variable "public_ip" {
   default     = false
   description = "Flag to set auto assign public ip"
-}
-
-variable "disable_log_streaming" {
-  default     = false
-  description = "Flag to disable log streaming to kibana"
 }
 
 variable "ecr_image_url" {
@@ -137,4 +122,8 @@ variable "port" {
 
 variable "prefix_logs" {
   default = "ecs"
+}
+
+variable "es_url" {
+  description = "Elasticsearch url to streaming logs"
 }

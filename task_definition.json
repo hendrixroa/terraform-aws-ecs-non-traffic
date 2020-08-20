@@ -1,46 +1,67 @@
 [
-    {
-      "essential": true,
-      "image": "${ecr_image_url}",
-      "name": "${name}",
-      "portMappings": [
-        {
-          "containerPort": ${port},
+  {
+    "essential": true,
+    "image": "amazon/aws-for-fluent-bit:latest",
+    "name": "log_router",
+    "firelensConfiguration": {
+      "type": "fluentbit"
+    },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${name}-firelens-container",
+        "awslogs-region": "${region}",
+        "awslogs-create-group": "true",
+        "awslogs-stream-prefix": "firelens"
+      }
+    },
+    "memoryReservation": 50
+  },
+  {
+    "essential": true,
+    "image": "${ecr_image_url}",
+    "name": "${name}",
+    "portMappings": [
+      {
+        "containerPort": ${port},
         "hostPort": ${port}
       }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-region": "${region}",
-          "awslogs-group": "${name}",
-          "awslogs-stream-prefix": "${prefix_logs}"
-        }
+    ],
+    "logConfiguration": {
+      "logDriver":"awsfirelens",
+      "options": {
+        "Name": "es",
+        "Host": "${es_url}",
+        "Port": "443",
+        "Index": "${name}",
+        "Type": "log",
+        "Aws_Region": "${region}",
+        "tls": "On"
+      }
+    },
+    "secrets": [
+      {
+        "name": "${secrets_name}",
+        "valueFrom": "${secrets_value_arn}"
+      }
+    ],
+    "environment": [
+      {
+        "name": "DATABASE_LOG_LEVEL",
+        "value": "${database_log_level}"
       },
-      "secrets": [
-        {
-          "name": "${secrets_name}",
-          "valueFrom": "${secrets_value_arn}"
-        }
-      ],
-      "environment": [
-        {
-          "name": "DATABASE_LOG_LEVEL",
-          "value": "${database_log_level}"
-        },
-        {
-          "name": "APP",
-          "value": "${name}"
-        },
-        {
-          "name": "LOG_LEVEL",
-          "value": "${log_level}"
-        },
-        {
-          "name": "PORT",
-          "value": "${port}"
-        }
-      ]
-    }
-  ]
-  
+      {
+        "name": "APP",
+        "value": "${name}"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "value": "${log_level}"
+      },
+      {
+        "name": "PORT",
+        "value": "${port}"
+      }
+    ]
+  }
+]
