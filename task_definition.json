@@ -1,7 +1,7 @@
 [
   {
     "essential": true,
-    "image": "amazon/aws-for-fluent-bit:latest",
+    "image": "906394416424.dkr.ecr.us-east-1.amazonaws.com/aws-for-fluent-bit:latest",
     "name": "log_router",
     "firelensConfiguration": {
       "type": "fluentbit"
@@ -25,7 +25,8 @@
         "Host": "${es_url}",
         "Port": "443",
         "Index": "${name}",
-        "Type": "log",
+        "Type": "${name}_type",
+        "Aws_Auth": "On",
         "Aws_Region": "${region}",
         "tls": "On"
       }
