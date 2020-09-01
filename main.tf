@@ -6,7 +6,7 @@ Module to provisioning services and rolling update deployments and autoscaling e
 
 //  AWS ECS Service to run the task definition
 resource "aws_ecs_service" "main" {
-  name                               = var.name
+  name                               = lower(var.name)
   cluster                            = var.cluster
   task_definition                    = aws_ecs_task_definition.main.arn
   launch_type                        = "FARGATE"
@@ -33,7 +33,7 @@ resource "aws_ecs_service" "main" {
 
 // AWS ECS Task defintion to run the container passed by name
 resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.name}-service"
+  family                   = lower("${var.name}-service")
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   execution_role_arn       = var.roleExecArn
@@ -48,7 +48,7 @@ data "template_file" "main" {
 
   vars = {
     ecr_image_url      = var.ecr_image_url
-    name               = var.name
+    name               = lower(var.name)
     port               = var.port
     region             = var.region
     secrets_name       = var.secrets_name
