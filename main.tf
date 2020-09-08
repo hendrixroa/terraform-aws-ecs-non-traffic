@@ -9,7 +9,6 @@ resource "aws_ecs_service" "main" {
   name                               = var.name
   cluster                            = var.cluster
   task_definition                    = aws_ecs_task_definition.main.arn
-  launch_type                        = "FARGATE"
   scheduling_strategy                = "REPLICA"
   desired_count                      = var.service_count
   force_new_deployment               = true
@@ -28,6 +27,11 @@ resource "aws_ecs_service" "main" {
     ignore_changes = [
       desired_count,
     ]
+  }
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 100
   }
 }
 
@@ -83,22 +87,22 @@ resource "aws_appautoscaling_target" "main" {
   }
 }
 
-// AWS Autoscaling policy to scale with additional instance if the criteria is reached
-resource "aws_appautoscaling_policy" "up" {
-  name               = "ecs_scale_up"
-  service_namespace  = "ecs"
-  resource_id        = "service/${var.cluster}/${aws_ecs_service.main.name}"
-  scalable_dimension = "ecs:service:DesiredCount"
+// AWS Autoscaling policy to scale using cpu allocation
+resource "aws_appautoscaling_policy" "cpu" {
+  name               = "ecs_scale_cpu"
+  resource_id        = aws_appautoscaling_target.main.resource_id
+  scalable_dimension = aws_appautoscaling_target.main.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.main.service_namespace
+  policy_type        = "TargetTrackingScaling"
 
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 60
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      scaling_adjustment          = 1
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }
+
+    target_value       = 75
+    scale_in_cooldown  = 60
+    scale_out_cooldown = 60
   }
 
   depends_on = [aws_appautoscaling_target.main]
@@ -108,22 +112,22 @@ resource "aws_appautoscaling_policy" "up" {
   }
 }
 
-// AWS Autoscaling policy to scale down instance if the criteria is reached
-resource "aws_appautoscaling_policy" "down" {
-  name               = "ecs_scale_down"
-  service_namespace  = "ecs"
-  resource_id        = "service/${var.cluster}/${aws_ecs_service.main.name}"
-  scalable_dimension = "ecs:service:DesiredCount"
+// AWS Autoscaling policy to scale using memory allocation
+resource "aws_appautoscaling_policy" "memory" {
+  name               = "ecs_scale_memory"
+  resource_id        = aws_appautoscaling_target.main.resource_id
+  scalable_dimension = aws_appautoscaling_target.main.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.main.service_namespace
+  policy_type        = "TargetTrackingScaling"
 
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 300
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_upper_bound = 0
-      scaling_adjustment          = -1
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
     }
+
+    target_value       = 75
+    scale_in_cooldown  = 60
+    scale_out_cooldown = 60
   }
 
   depends_on = [aws_appautoscaling_target.main]
