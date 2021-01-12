@@ -63,7 +63,6 @@ resource "aws_ecs_task_definition" "main" {
       "options": {
         "awslogs-group": "${var.name}-firelens-container",
         "awslogs-region": "${var.region}",
-        "awslogs-create-group": "true",
         "awslogs-stream-prefix": "firelens"
       }
     },
@@ -123,6 +122,12 @@ resource "aws_ecs_task_definition" "main" {
   }
 ]
 TASK_DEFINITION
+}
+
+// Auxiliary logs
+resource "aws_cloudwatch_log_group" "main" {
+  name              = "${var.name}-firelens-container"
+  retention_in_days = 14
 }
 
 /*===========================================
