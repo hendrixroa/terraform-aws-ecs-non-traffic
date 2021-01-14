@@ -127,3 +127,7 @@ variable "prefix_logs" {
 variable "es_url" {
   description = "Elasticsearch url to streaming logs"
 }
+
+variable "use_cloudwatch_logs" {
+  default = false
+}
