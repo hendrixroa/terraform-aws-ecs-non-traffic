@@ -143,6 +143,12 @@ resource "aws_cloudwatch_log_group" "main" {
   retention_in_days = 14
 }
 
+resource "aws_cloudwatch_log_group" "main_app" {
+  count             = var.use_cloudwatch_logs ? 1 : 0
+  name              = var.name
+  retention_in_days = 14
+}
+
 /*===========================================
               Autoscaling zone
 ============================================*/
