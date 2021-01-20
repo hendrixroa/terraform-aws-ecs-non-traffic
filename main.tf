@@ -22,8 +22,6 @@ resource "aws_ecs_service" "main" {
   }
 
   lifecycle {
-    create_before_destroy = true
-
     ignore_changes = [
       desired_count,
     ]
@@ -46,10 +44,6 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = var.memory
 
   container_definitions    = data.template_file.main.rendered
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 data "template_file" "main" {
@@ -97,8 +91,6 @@ resource "aws_appautoscaling_target" "main" {
   max_capacity       = var.max_scale
 
   lifecycle {
-    create_before_destroy = true
-
     ignore_changes = [
       role_arn,
     ]
@@ -124,10 +116,6 @@ resource "aws_appautoscaling_policy" "cpu" {
   }
 
   depends_on = [aws_appautoscaling_target.main]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 // AWS Autoscaling policy to scale using memory allocation
@@ -149,8 +137,4 @@ resource "aws_appautoscaling_policy" "memory" {
   }
 
   depends_on = [aws_appautoscaling_target.main]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
