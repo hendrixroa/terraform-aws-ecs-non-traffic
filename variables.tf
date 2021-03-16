@@ -58,14 +58,6 @@ variable "environment" {
   default     = []
 }
 
-variable "secrets_name" {
-  description = "Secrets name for ecs task"
-}
-
-variable "secrets_value_arn" {
-  description = "Secrets values for ecs task"
-}
-
 variable "auto_scale_role" {
   description = "IAM Role for autocaling services"
   default     = ""
@@ -130,4 +122,8 @@ variable "es_url" {
 
 variable "use_cloudwatch_logs" {
   default = false
+}
+
+variable "environment_list" {
+  description = "Environment variables in map-list format. eg: [{ name='foo', value='bar' }]"
 }
